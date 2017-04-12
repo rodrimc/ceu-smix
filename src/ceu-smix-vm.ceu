@@ -1,0 +1,68 @@
+native/nohold 
+  _strcmp,
+  _printf
+  ;
+
+event (void) smix_event;
+vector [] byte event_condition = _;
+vector [] byte event_source = _;
+
+code/await 
+Smix_Link (var int index) -> FOREVER
+do
+  vector [] byte condition = [] .. [[ SMIX[@index][1][1] ]];
+  vector [] byte source    = [] .. [[ SMIX[@index][1][2] ]];
+
+  vector [] byte action    = _; 
+  vector [] byte target    = _; 
+
+  every outer.smix_event do
+    if _strcmp (&&outer.event_condition[0], &&condition[0]) == 0 and 
+       _strcmp (&&outer.event_source[0], &&source[0]) == 0 then
+
+      var int actions = [[ #SMIX[@index] - 1 ]]; 
+      var int i;
+      loop i in [1 -> actions ] do
+        [[ 
+           predicate = SMIX[@index][2][1]
+           if (type (predicate) == 'function' ) then
+             predicate = predicate ()
+           end
+        ]]
+        
+        var bool predicate = [[ predicate ]]; 
+
+        if predicate then
+          action = [] .. [[ SMIX[@index][@i + 1][2] ]];
+          target = [] .. [[ SMIX[@index][@i + 1][3] ]];
+
+          _printf ("%s\n", &&action[0]);
+          _printf ("%s\n", &&target[0]);
+        end
+      end
+    end
+  end
+end
+
+pool [] Smix_Link links_pool;
+
+/* load SMIX file */
+vector [] byte file = [] .. "examples/example1.lua";
+[[
+  SMIX = dofile (@file) 
+]]
+
+
+/* spawn links */
+var int links = [[ #SMIX - 1 ]];
+var int i;
+loop i in [1 -> links] do
+  spawn Smix_Link (i + 1) in links_pool;
+end
+
+/* start application */
+event_condition = [] .. "start";
+event_source    = [] .. "lambda";
+emit smix_event;
+
+escape 0;
