@@ -46,17 +46,30 @@ do
   var Media.Default media = val Media.Default ([] .. src, region);
   /*TODO: set other properties */
 
-  var& IPlayer player;
-  watching Play (&scene, &media) -> (&player)
+  _debug ("Smix_Media (%s)\n", &&mediaid[0]);
   do
-    /* should we await the CM_PLAYER_START event? */
-    outer.event_condition = [] .. "start";
-    outer.event_source    = [] .. mediaid;
-    emit outer.smix_event;
+    var& IPlayer player;
+    watching Play (&scene, &media) -> (&player)
+    do
+      /* should we await the CM_PLAYER_START event? */
+      outer.event_condition = [] .. START;
+      outer.event_source    = [] .. mediaid;
+      emit outer.smix_event;
 
-    await FOREVER;
+      par do
+        var uint id = await CM_PLAYER_START until (id == player.self);
+        _debug ("%s has started\n", &&mediaid[0]);
+      with
+        /* TODO: */
+      end
+    end
   end
+
+  outer.event_condition = [] .. STOP;
+  outer.event_source    = [] .. mediaid;
+  emit outer.smix_event;
 end
+
 pool [] Smix_Media media_pool;
 
 code/await
@@ -74,6 +87,9 @@ do
   every outer.smix_event do
     if _strcmp (&&outer.event_condition[0], &&condition[0]) == 0 and
        _strcmp (&&outer.event_source[0], &&source[0]) == 0 then
+
+      _debug ("link triggered: cond (%s) source (%s)\n",
+                &&condition[0], &&source[0]);
 
       var int actions = [[ #SMIX[@index] - 1 ]];
       var int i;
@@ -125,7 +141,7 @@ watching Scene (Size(width, height)) -> (&scene) do
   end
 
   /* start application */
-  event_condition = [] .. "start";
+  event_condition = [] .. START;
   event_source    = [] .. "lambda";
   emit smix_event;
 
