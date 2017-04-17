@@ -2,8 +2,8 @@ return
 {
   --MEDIA
   {
-    x1 = { src='samples/clock.ogv', z = 2},
-    x2 = { src='samples/lego.ogv', x = 200}
+    x1 = { uri='samples/clock.ogv', z = 2},
+    x2 = { uri='samples/lego.ogv', x = 200}
   },
   --LINKS
   {
@@ -18,7 +18,7 @@ return
   },
   {
     {'stop', 'x2'},
-    {true, 'stop', 'x1'}
+    {true, 'stop', 'x1', nil, nil, 'normal'}
   }
 }
 

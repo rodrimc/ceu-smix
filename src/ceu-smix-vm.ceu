@@ -57,7 +57,7 @@ Smix_Media_Controller (var& IScene scene) -> void
 do
   /* properties */
   vector[] byte operand = [] .. outer.action_operand;
-  vector[] byte src = [] .. [[ SMIX[MEDIATAB][@operand].src or '' ]];
+  vector[] byte uri = [] .. [[ SMIX[MEDIATAB][@operand].uri or '' ]];
   var Region region = val Region (0, 0, 0, 0, 1);
   region.x      = [[ SMIX[MEDIATAB][@operand].x or 0 ]];
   region.y      = [[ SMIX[MEDIATAB][@operand].y or 0 ]];
@@ -65,7 +65,7 @@ do
   region.height = [[ SMIX[MEDIATAB][@operand].height or 0 ]];
   region.z      = [[ SMIX[MEDIATAB][@operand].z or 1 ]];
 
-  var Media.Default media = val Media.Default ([] .. src, region);
+  var Media.Default media = val Media.Default ([] .. uri, region);
   /*TODO: set other properties */
 
   var bool is_pinned = equal (ptr(outer.action_type), PINNED);
@@ -161,7 +161,7 @@ end
 pool [] Smix_Link links_pool;
 
 /* load SMIX file */
-vector [] byte file = [] .. "examples/example2.lua";
+vector [] byte file = [] .. "examples/example1.lua";
 [[
   SMIX = dofile (@file)
 
