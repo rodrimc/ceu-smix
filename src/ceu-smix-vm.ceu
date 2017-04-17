@@ -1,12 +1,12 @@
 #include "media/media.ceu"
 
-#define MEDIATAB        1
-#define ACT_PREDICATE   1
-#define ACT_CODE        2
-#define ACT_OPERAND     3
-#define ACT_PROP        4
-#define ACT_VALUE       5
-#define ACT_ACTTYPE     6
+#define MEDIATAB       1
+#define ACT_PREDICATE  1
+#define ACT_CODE       2
+#define ACT_OPERAND    3
+#define ACT_PROP       4
+#define ACT_VALUE      5
+#define ACT_TYPE       6
 
 #define START    "start"
 #define STOP     "stop"
@@ -50,10 +50,10 @@ vector [] byte action_value = _;
 vector [] byte action_type = _;
 
 code/await
-Smix_Media_Controller (var& IScene scene, vector&[] byte mediaid) -> void
+Smix_Media_Controller (var& IScene scene) -> void
 do
   /* properties */
-  vector[] byte operand = [] .. mediaid;
+  vector[] byte operand = [] .. outer.action_operand;
   vector[] byte src = [] .. [[ SMIX[MEDIATAB][@operand].src or '' ]];
   var Region region = val Region (0, 0, 0, 0, 1);
   region.x      = [[ SMIX[MEDIATAB][@operand].x or 0 ]];
@@ -103,12 +103,10 @@ do
   vector [] byte condition = [] .. [[ SMIX[@index][1][1] ]];
   vector [] byte source    = [] .. [[ SMIX[@index][1][2] ]];
 
-  vector [] byte actcode    = _;
-  vector [] byte actoperand    = _;
-
   _debug ("link (%d): cond (%s) source (%s)\n", index,
               ptr(condition), ptr(source));
 
+  vector [] byte actcode    = _;
   every outer.smix_event do
     if equalptr (outer.event_condition, condition) and
        equalptr (outer.event_source, source) then
@@ -121,7 +119,6 @@ do
       loop i in [2 -> actions + 1] do
         [[
            predicate = SMIX[@index][@i][ACT_PREDICATE]
-           print (predicate)
            if (type (predicate) == 'function' ) then
              predicate = predicate ()
            end
@@ -130,15 +127,18 @@ do
         var bool predicate = [[ predicate ]];
 
         if predicate then
-          actcode = [] .. [[ SMIX[@index][@i][ACT_CODE] ]];
-          actoperand = [] .. [[ SMIX[@index][@i][ACT_OPERAND] ]];
+
+          actcode              = [] .. [[ SMIX[@index][@i][ACT_CODE] ]];
+          outer.action_operand = [] .. [[ SMIX[@index][@i][ACT_OPERAND] ]];
+          outer.action_prop    = [] .. [[ SMIX[@index][@i][ACT_PROP] or "" ]];
+          outer.action_value   = [] .. [[ SMIX[@index][@i][ACT_VALUE] or "" ]];
+          outer.action_type    = [] .. [[ SMIX[@index][@i][ACT_TYPE]
+                                                              or "normal" ]];
 
           if equal (ptr(actcode), START) then
-            spawn Smix_Media_Controller (&scene, &actoperand)
-                                                        in outer.media_pool;
+            spawn Smix_Media_Controller (&scene) in outer.media_pool;
           else/if equal (ptr(actcode), STOP) then
             outer.action_code = [] .. STOP;
-            outer.action_operand = [] .. actoperand;
             emit outer.smix_action;
           end
         end
