@@ -7,6 +7,8 @@
 #define SEEK     "seek"
 #define SET      "set"
 
+#define equal(arg1, arg2) _strcmp (arg1, arg2) == 0
+
 native/pre do
 ##ifdef DEBUG
  ##undef DEBUG
@@ -28,49 +30,57 @@ event (void) smix_event;
 vector [] byte event_condition = _;
 vector [] byte event_source = _;
 
-vector [] byte event_action = _;
-vector [] byte event_target = _;
+event (void) smix_action;
+vector [] byte action_code    = _;
+vector [] byte action_operand = _;
 
 code/await
-Smix_Media (var& IScene scene, vector&[] byte mediaid) -> void
+Smix_Media_Controller (var& IScene scene, vector&[] byte mediaid) -> void
 do
   /* properties */
-  vector[] byte src = [] .. [[ SMIX[@MEDIA][@mediaid].src or '' ]];
+  vector[] byte operand = [] .. mediaid;
+  vector[] byte src = [] .. [[ SMIX[@MEDIA][@operand].src or '' ]];
   var Region region = val Region (0, 0, 0, 0, 1);
-  region.x      = [[ SMIX[@MEDIA][@mediaid].x or 0 ]];
-  region.y      = [[ SMIX[@MEDIA][@mediaid].y or 0 ]];
-  region.width  = [[ SMIX[@MEDIA][@mediaid].width or 0 ]];
-  region.height = [[ SMIX[@MEDIA][@mediaid].height or 0 ]];
-  region.z      = [[ SMIX[@MEDIA][@mediaid].z or 1 ]];
+  region.x      = [[ SMIX[@MEDIA][@operand].x or 0 ]];
+  region.y      = [[ SMIX[@MEDIA][@operand].y or 0 ]];
+  region.width  = [[ SMIX[@MEDIA][@operand].width or 0 ]];
+  region.height = [[ SMIX[@MEDIA][@operand].height or 0 ]];
+  region.z      = [[ SMIX[@MEDIA][@operand].z or 1 ]];
 
   var Media.Default media = val Media.Default ([] .. src, region);
   /*TODO: set other properties */
 
-  _debug ("Smix_Media (%s)\n", &&mediaid[0]);
+  _debug ("Smix_Media_Controller (%s)\n", &&operand[0]);
   do
     var& IPlayer player;
-    watching Play (&scene, &media) -> (&player)
+    event (void) stop;
+    watching Play (&scene, &media) -> (&player), stop
     do
       /* should we await the CM_PLAYER_START event? */
       outer.event_condition = [] .. START;
-      outer.event_source    = [] .. mediaid;
+      outer.event_source    = [] .. operand;
       emit outer.smix_event;
 
       par do
         var uint id = await CM_PLAYER_START until (id == player.self);
-        _debug ("%s has started\n", &&mediaid[0]);
+        _debug ("%s has started\n", &&operand[0]);
       with
-        /* TODO: */
+        every outer.smix_action do
+          if equal (&&outer.action_code[0], STOP) and
+             equal (&&outer.action_operand[0], &&operand[0]) then
+             emit stop;
+          end
+        end
       end
     end
   end
 
   outer.event_condition = [] .. STOP;
-  outer.event_source    = [] .. mediaid;
+  outer.event_source    = [] .. operand;
   emit outer.smix_event;
 end
 
-pool [] Smix_Media media_pool;
+pool [] Smix_Media_Controller media_pool;
 
 code/await
 Smix_Link (var& IScene scene, var int index) -> FOREVER
@@ -81,12 +91,12 @@ do
   vector [] byte action    = _;
   vector [] byte target    = _;
 
-  _debug ("link: cond (%s) source (%s)\n",
+  _debug ("link (%d): cond (%s) source (%s)\n", index,
               &&condition[0], &&source[0]);
 
   every outer.smix_event do
-    if _strcmp (&&outer.event_condition[0], &&condition[0]) == 0 and
-       _strcmp (&&outer.event_source[0], &&source[0]) == 0 then
+    if equal (&&outer.event_condition[0], &&condition[0]) and
+       equal (&&outer.event_source[0], &&source[0]) then
 
       _debug ("link triggered: cond (%s) source (%s)\n",
                 &&condition[0], &&source[0]);
@@ -107,8 +117,12 @@ do
           action = [] .. [[ SMIX[@index][@i + 1][2] ]];
           target = [] .. [[ SMIX[@index][@i + 1][3] ]];
 
-          if _strcmp (&&action[0], START) == 0 then
-            spawn Smix_Media (&scene, &target) in outer.media_pool;
+          if equal (&&action[0], START) then
+            spawn Smix_Media_Controller (&scene, &target) in outer.media_pool;
+          else/if equal (&&action[0], STOP) then
+            outer.action_code = [] .. STOP;
+            outer.action_operand = [] .. target;
+            emit outer.smix_action;
           end
         end
       end
