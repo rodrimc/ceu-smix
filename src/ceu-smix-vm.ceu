@@ -3,7 +3,7 @@
 #define MEDIATAB       1
 #define COND_INDEX     1
 #define COND_CODE      1
-#define COND_OPERAND   2 
+#define COND_OPERAND   2
 #define ACT_PREDICATE  1
 #define ACT_CODE       2
 #define ACT_OPERAND    3
@@ -68,16 +68,21 @@ do
   var Media.Default media = val Media.Default ([] .. src, region);
   /*TODO: set other properties */
 
+  var bool is_pinned = equal (ptr(outer.action_type), PINNED);
+
   _debug ("Smix_Media_Controller (%s)\n", ptr(operand));
+
   do
     var& IPlayer player;
     event (void) stop;
     watching Play (&scene, &media) -> (&player), stop
     do
       /* should we await the CM_PLAYER_START event? */
-      outer.event_condition = [] .. START;
-      outer.event_source    = [] .. operand;
-      emit outer.smix_event;
+      if not is_pinned then
+        outer.event_condition = [] .. START;
+        outer.event_source    = [] .. operand;
+        emit outer.smix_event;
+      end
 
       par do
         var uint id = await CM_PLAYER_START until (id == player.self);
@@ -86,6 +91,7 @@ do
         every outer.smix_action do
           if equal (ptr(outer.action_code), STOP) and
              equalptr (outer.action_operand, operand) then
+             is_pinned = equal (ptr(outer.action_type), PINNED);
              emit stop;
           end
         end
@@ -93,9 +99,11 @@ do
     end
   end
 
-  outer.event_condition = [] .. STOP;
-  outer.event_source    = [] .. operand;
-  emit outer.smix_event;
+  if not is_pinned then
+    outer.event_condition = [] .. STOP;
+    outer.event_source    = [] .. operand;
+    emit outer.smix_event;
+  end
 end
 
 pool [] Smix_Media_Controller media_pool;
