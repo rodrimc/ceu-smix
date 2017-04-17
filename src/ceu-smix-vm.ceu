@@ -1,6 +1,9 @@
 #include "media/media.ceu"
 
 #define MEDIATAB       1
+#define COND_INDEX     1
+#define COND_CODE      1
+#define COND_OPERAND   2 
 #define ACT_PREDICATE  1
 #define ACT_CODE       2
 #define ACT_OPERAND    3
@@ -100,19 +103,19 @@ pool [] Smix_Media_Controller media_pool;
 code/await
 Smix_Link (var& IScene scene, var int index) -> FOREVER
 do
-  vector [] byte condition = [] .. [[ SMIX[@index][1][1] ]];
-  vector [] byte source    = [] .. [[ SMIX[@index][1][2] ]];
+  vector[] byte cond_code    = []..[[SMIX[@index][COND_INDEX][COND_CODE] ]];
+  vector[] byte cond_operand = []..[[SMIX[@index][COND_INDEX][COND_OPERAND] ]];
 
   _debug ("link (%d): cond (%s) source (%s)\n", index,
-              ptr(condition), ptr(source));
+              ptr(cond_code), ptr(cond_operand));
 
   vector [] byte actcode    = _;
   every outer.smix_event do
-    if equalptr (outer.event_condition, condition) and
-       equalptr (outer.event_source, source) then
+    if equalptr (outer.event_condition, cond_code) and
+       equalptr (outer.event_source, cond_operand) then
 
       _debug ("link triggered: cond (%s) source (%s)\n",
-                ptr(condition), ptr(source));
+                ptr(cond_code), ptr(cond_operand));
 
       var int actions = [[ #SMIX[@index] - 1 ]];
       var int i;
