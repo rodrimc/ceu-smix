@@ -7,7 +7,7 @@ return
   },
   --LINKS
   {
-    {'start', 'lambda'},
+    {'start', lambda},
     {true, 'start', 'x1'},
     {true, 'start', 'x2'}
   },

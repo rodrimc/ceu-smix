@@ -163,15 +163,17 @@ pool [] Smix_Link links_pool;
 /* load SMIX file */
 vector [] byte file = [] .. "examples/example1.lua";
 [[
+  lambda = string.char(255)
+
   SMIX = dofile (@file)
 
-  if SMIX[@MEDIATAB].lambda == nil then
-    SMIX[@MEDIATAB].lambda = {width = 640, height = 480}
+  if SMIX[MEDIATAB][lambda] == nil then
+    SMIX[MEDIATAB][lambda] = {width = 640, height = 480}
   end
 ]]
 
-var int width   = [[ SMIX[MEDIATAB].lambda.width ]];
-var int height  = [[ SMIX[MEDIATAB].lambda.height ]];
+var int width   = [[ SMIX[MEDIATAB][lambda].width ]];
+var int height  = [[ SMIX[MEDIATAB][lambda].height ]];
 
 var& IScene scene;
 watching Scene (Size(width, height)) -> (&scene) do
@@ -184,7 +186,7 @@ watching Scene (Size(width, height)) -> (&scene) do
 
   /* start application */
   event_condition = [] .. START;
-  event_source    = [] .. "lambda";
+  event_source    = [] .. [[ lambda ]];
   emit smix_event;
 
   await FOREVER;
